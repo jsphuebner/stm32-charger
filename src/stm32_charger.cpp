@@ -29,6 +29,7 @@
 #include <libopencm3/stm32/timer.h>
 #include <libopencm3/stm32/can.h>
 #include <libopencm3/stm32/iwdg.h>
+#include <libopencm3/stm32/rtc.h>
 #include "stm32scheduler.h"
 #include "stm32_can.h"
 #include "terminal.h"
@@ -40,6 +41,8 @@
 #include "temp_meas.h"
 #include "param_save.h"
 #include "my_math.h"
+
+#define CAN_TIMEOUT       50  //500ms
 
 static uint8_t  pwmdigits;
 static uint16_t pwmfrq;
@@ -119,6 +122,11 @@ static void Ms100Task(void)
    s32fp idcIncr = Param::Get(Param::idcramp) / 10;
    s32fp tmphs = Param::Get(Param::tmphs);
    s32fp tmphsmax = Param::Get(Param::tmphsmax);
+
+   if ((rtc_get_counter_val() - Can::GetInterface(0)->GetLastRxTimestamp()) >= CAN_TIMEOUT)
+   {
+      _idcspnt = 0;
+   }
 
    if (tmphs > tmphsmax || derate)
    {
@@ -278,7 +286,7 @@ extern "C" int main(void)
 
    usart_setup();
    nvic_setup();
-   PwmInit();
+   rtc_setup();
    AnaIn::Start();
    parm_load();
    parm_Change(Param::PARAM_LAST);
