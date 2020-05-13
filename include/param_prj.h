@@ -41,14 +41,13 @@
    3. Display values
  */
 //Next param id (increase when adding new parameter!): 71
-/*              name         unit       min     max     default ofs gain id */
+/*               category  name         unit       min     max     default id */
 #define PARAM_LIST \
     PARAM_ENTRY("Default", pwmfrq,      PWMFRQS,   0,      4,      2,      13  ) \
     PARAM_ENTRY("Default", pwmpol,      PWMPOLS,   0,      1,      0,      52  ) \
     PARAM_ENTRY("Default", deadtime,    "dig",     0,      255,    28,     14  ) \
-    PARAM_ENTRY("Default", numimp,      "Imp/rev", 8,      8192,   60,     15  ) \
+    PARAM_ENTRY("Default", maxvtg,      "V",       8,      1000,   60,     15  ) \
     PARAM_ENTRY("Default", udcsw,       "V",       0,      1000,   330,    20  ) \
-    PARAM_ENTRY("Default", uoutsw,      "V",       0,      1000,   450,    42  ) \
     PARAM_ENTRY("Default", udclim,      "V",       0,      1000,   540,    48  ) \
     PARAM_ENTRY("Default", ocurlim,     "A",       -1000,  1000,   -100,   22  ) \
     PARAM_ENTRY("Default", tmphsmax,    "°C",      20,     100,    70,     1   ) \
@@ -66,7 +65,6 @@
     PARAM_ENTRY("Default", idclim,      "A",       0,      50,     25,     70   ) \
     PARAM_ENTRY("Default", idcspnt,     "A",       0,      50,     0,      0   ) \
     PARAM_ENTRY("Default", run,         ONOFF,     0,      1,      0,      0   ) \
-    PARAM_ENTRY("Default", timeout,     "100ms",   0,      600,    0,      0   ) \
     PARAM_ENTRY("Default", version,     "",        0,      0,      VER,    0   ) \
     VALUE_ENTRY(opmode,      OPMODES, 1000 ) \
     VALUE_ENTRY(udc,         "V",     1001 ) \
@@ -74,9 +72,9 @@
     VALUE_ENTRY(amp,         "dig",   1004 ) \
     VALUE_ENTRY(tmphs,       "°C",    1005 ) \
     VALUE_ENTRY(uaux,        "V",     1006 ) \
-    VALUE_ENTRY(din_start,   "",      1008 ) \
-    VALUE_ENTRY(din_emcystop,"",      1009 ) \
-    VALUE_ENTRY(din_ocur,    "",      1010 ) \
-    VALUE_ENTRY(din_bms,     "",      1011 ) \
+    VALUE_ENTRY(din_start,   ONOFF,   1008 ) \
+    VALUE_ENTRY(din_emcystop,ONOFF,   1009 ) \
+    VALUE_ENTRY(din_ocur,    ONOFF,   1010 ) \
+    VALUE_ENTRY(din_bms,     ONOFF,   1011 ) \
     VALUE_ENTRY(tm_meas,     "us",    1012 ) \
 

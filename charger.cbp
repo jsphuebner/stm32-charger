@@ -2,7 +2,7 @@
 <CodeBlocks_project_file>
 	<FileVersion major="1" minor="6" />
 	<Project>
-		<Option title="sinus" />
+		<Option title="charger" />
 		<Option makefile_is_custom="1" />
 		<Option pch_mode="2" />
 		<Option compiler="armelfgcc" />
@@ -78,14 +78,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="src/hwinit.cpp" />
-		<Unit filename="src/inc_encoder.cpp" />
-		<Unit filename="src/pwmgeneration-foc.cpp" />
-		<Unit filename="src/pwmgeneration-sine.cpp" />
-		<Unit filename="src/pwmgeneration.cpp" />
-		<Unit filename="src/stm32_sine.cpp" />
+		<Unit filename="src/stm32_charger.cpp" />
 		<Unit filename="src/temp_meas.cpp" />
 		<Unit filename="src/terminal_prj.cpp" />
-		<Unit filename="src/throttle.cpp" />
 		<Unit filename="stm32_sine.ld" />
 		<Unit filename="test/Makefile">
 			<Option target="&lt;{~None~}&gt;" />

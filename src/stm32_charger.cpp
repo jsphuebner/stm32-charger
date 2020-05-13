@@ -140,15 +140,6 @@ static void Ms100Task(void)
    DigIo::led_out.Toggle();
    iwdg_reset();
 
-   /*if (Param::GetInt(Param::timeout) > 0)
-   {
-      Param::SetInt(Param::timeout, Param::GetInt(Param::timeout) - 1);
-   }
-   else
-   {
-      Param::SetInt(Param::opmode, 0);
-   }*/
-
    Param::SetInt(Param::din_start, DigIo::start_in.Get());
    Param::SetInt(Param::din_emcystop, DigIo::emcystop_in.Get());
    Param::SetInt(Param::din_bms, DigIo::bms_in.Get());
@@ -212,7 +203,7 @@ static void Ms10Task(void)
    CalcAndOutputTemp();
 
    /* switch on DC switch above threshold */
-   if (udc >= Param::Get(Param::udcsw) && /* Param::GetInt(Param::timeout) > 10 &&*/ (DigIo::start_in.Get() || Param::GetInt(Param::run) == 1))
+   if (udc >= Param::Get(Param::udcsw) && (DigIo::start_in.Get() || Param::GetInt(Param::run) == 1))
    {
       opmode = MOD_WAIT;
       DigIo::dcsw_out.Set();
