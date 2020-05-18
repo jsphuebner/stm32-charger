@@ -125,20 +125,22 @@ static void Ms100Task(void)
    s32fp idcIncr = Param::Get(Param::idcramp) / 10;
    s32fp tmphs = Param::Get(Param::tmphs);
    s32fp tmphsmax = Param::Get(Param::tmphsmax);
+   uint32_t lastCanReceptionTime = Can::GetInterface(0)->GetLastRxTimestamp();
 
-   if ((rtc_get_counter_val() - Can::GetInterface(0)->GetLastRxTimestamp()) >= CAN_TIMEOUT)
+   /* If we ever received something via CAN, assume CAN controlled mode */
+   if (lastCanReceptionTime > 0 && (rtc_get_counter_val() - lastCanReceptionTime) >= CAN_TIMEOUT)
    {
       _idcspnt = 0;
    }
 
-   if (tmphs > tmphsmax || derate)
+   if (tmphs < (tmphsmax - FP_FROMINT(5)))
+   {
+      derate = false;
+   }
+   else if (tmphs > tmphsmax || derate)
    {
       _idcspnt = 0;
       derate = true;
-   }
-   else if (tmphs < (tmphsmax - FP_FROMINT(5)))
-   {
-      derate = false;
    }
 
    if ((idcspnt + idcIncr) <= _idcspnt)
