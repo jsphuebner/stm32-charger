@@ -39,6 +39,7 @@ The board uses the known CAN module from the inverter so you can map anything ev
 - can tx idclim 264 24 8 1
 - can rx idcspnt 258 24 8 32
 - can rx soc 258 48 16 16
+
 Obviously this takes none of the safety measures into account
 
 # Compiling
