@@ -127,7 +127,7 @@ void rtc_setup()
 * @param[in] pwmpol Output Polarity. 0=Active High, 1=Active Low
 * @return PWM frequency
 */
-uint16_t tim_setup(uint16_t pwmdigits, uint16_t deadtime, int pwmpol)
+uint16_t tim_setup(uint16_t pwmdigits, int pwmpol)
 {
    const uint16_t pwmmax = 1U << pwmdigits;
    /* disable timer */
@@ -162,7 +162,7 @@ uint16_t tim_setup(uint16_t pwmdigits, uint16_t deadtime, int pwmpol)
    timer_set_enabled_off_state_in_run_mode(PWM_TIMER);
    timer_set_enabled_off_state_in_idle_mode(PWM_TIMER);
 
-   timer_set_deadtime(PWM_TIMER, deadtime);
+   timer_set_deadtime(PWM_TIMER, 0);
 
    timer_set_oc_idle_state_unset(PWM_TIMER, TIM_OC1);
    timer_set_oc_idle_state_unset(PWM_TIMER, TIM_OC2);

@@ -70,11 +70,13 @@ extern "C" void pwm_timer_isr(void)
    TIM_SR(PWM_TIMER) &= ~TIM_SR_UIF;
 
    idcflt = IIRFILTER(idcflt, AnaIn::idc.Get(), Param::GetInt(Param::idcflt));
-   if (MOD_OFF == Param::GetInt(Param::opmode))
+   if (MOD_RUN != Param::GetInt(Param::opmode))
    {
       idcofs = idcflt;
       esum = 0;
       SetCurrentLimitThreshold();
+      timer_set_oc_value(PWM_TIMER, TIM_OC1, 0);
+      timer_set_oc_value(PWM_TIMER, TIM_OC2, 0);
    }
    else
    {
@@ -110,8 +112,9 @@ extern "C" void pwm_timer_isr(void)
 static void PwmInit(void)
 {
    pwmdigits = MIN_PWM_DIGITS + Param::GetInt(Param::pwmfrq);
-   pwmfrq = tim_setup(pwmdigits, Param::GetInt(Param::deadtime), Param::GetInt(Param::pwmpol));
+   pwmfrq = tim_setup(pwmdigits, Param::GetInt(Param::pwmpol));
    pwmmax = (1 << pwmdigits) - 1;
+   pwmmax = MIN(pwmmax, Param::GetInt(Param::pwmmax));
 }
 
 
@@ -144,6 +147,7 @@ static void Ms100Task(void)
       idcspnt = _idcspnt;
    else
       idcspnt = _idcspnt;
+
 
    DigIo::led_out.Toggle();
    iwdg_reset();
@@ -211,12 +215,20 @@ static void Ms10Task(void)
    CalcAndOutputTemp();
 
    /* switch on DC switch above threshold */
-   if (udc >= Param::Get(Param::udcsw) && (DigIo::start_in.Get() || Param::GetInt(Param::run) == 1))
+   if (opmode == MOD_OFF && udc >= Param::Get(Param::udcsw) && (DigIo::start_in.Get() || Param::GetInt(Param::run) == 1))
    {
       opmode = MOD_WAIT;
       DigIo::dcsw_out.Set();
       Param::SetInt(Param::run, 0); //reset so it doesn't restart on error
       Param::SetInt(Param::opmode, MOD_WAIT);
+   }
+
+   if (initWait < 0 && DigIo::start_in.Get())
+   {
+      opmode = MOD_EXIT;
+      Param::SetInt(Param::opmode, MOD_EXIT);
+      initWait = 100;
+      idcspnt = 0;
    }
 
    if (MOD_OFF == opmode)
@@ -226,6 +238,17 @@ static void Ms10Task(void)
       tim_output_disable();
       DigIo::dcsw_out.Clear();
       DigIo::outc_out.Clear();
+   }
+   else if (MOD_EXIT == opmode)
+   {
+      if (initWait > 0)
+      {
+         initWait--;
+      }
+      else
+      {
+         Param::SetInt(Param::opmode, MOD_OFF);
+      }
    }
    else if (100 == initWait)
    {

@@ -17,7 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define OPMODES "0=Off, 1=Wait, 2=Run"
+#define OPMODES  "0=Off, 1=Wait, 2=Run, 3=Exit"
 #define PWMFRQS  "0=17.6kHz, 1=8.8kHz, 2=4.4KHz, 3=2.2kHz, 4=1.1kHz"
 #define PWMPOLS  "0=ACTHIGH, 1=ACTLOW"
 #define ONOFF    "0=OFF, 1=ON"
@@ -29,6 +29,7 @@
 #define MOD_OFF    0
 #define MOD_WAIT   1
 #define MOD_RUN    2
+#define MOD_EXIT   3
 
 #define PWM_FUNC_TMPM  0
 #define PWM_FUNC_TMPHS 1
@@ -45,22 +46,22 @@
 #define PARAM_LIST \
     PARAM_ENTRY("Default", pwmfrq,      PWMFRQS,   0,      4,      2,      13  ) \
     PARAM_ENTRY("Default", pwmpol,      PWMPOLS,   0,      1,      0,      52  ) \
-    PARAM_ENTRY("Default", deadtime,    "dig",     0,      255,    28,     14  ) \
     PARAM_ENTRY("Default", maxvtg,      "V",       8,      1000,   60,     15  ) \
     PARAM_ENTRY("Default", udcsw,       "V",       0,      1000,   330,    20  ) \
     PARAM_ENTRY("Default", udclim,      "V",       0,      1000,   540,    48  ) \
     PARAM_ENTRY("Default", ocurlim,     "A",       -1000,  1000,   -100,   22  ) \
     PARAM_ENTRY("Default", tmphsmax,    "°C",      20,     100,    70,     1   ) \
     PARAM_ENTRY("Default", minpulse,    "dig",     0,      4095,   32,     24  ) \
-    PARAM_ENTRY("Default", idcgain,     "dig/A",   -100,   100,    -4.7,   27  ) \
+    PARAM_ENTRY("Default", pwmmax,      "dig",     0,      4095,   3500,    2   ) \
+    PARAM_ENTRY("Default", idcgain,     "dig/A",   -100,   100,    10,     27  ) \
     PARAM_ENTRY("Default", udcgain,     "dig/V",   0,      4095,   6.175,  29  ) \
     PARAM_ENTRY("Default", pwmgain,     "dig/C",   -65535, 65535,  100,    40  ) \
     PARAM_ENTRY("Default", pwmofs,      "dig",     -65535, 65535,  0,      41  ) \
     PARAM_ENTRY("Default", dispgain,    "dig/A",   -65535, 65535,  100,    68  ) \
     PARAM_ENTRY("Default", snshs,       SNS_HS,    0,      1,      0,      45  ) \
-    PARAM_ENTRY("Default", idckp,       "dig",     0,      1000,   1,      65  ) \
-    PARAM_ENTRY("Default", idcki,       "dig",     0,      1000,   1,      66  ) \
-    PARAM_ENTRY("Default", idcflt,      "dig",     0,      16,     1,      67  ) \
+    PARAM_ENTRY("Default", idckp,       "dig",     0,      1000,   20,     65  ) \
+    PARAM_ENTRY("Default", idcki,       "dig",     0,      1000,   10,     66  ) \
+    PARAM_ENTRY("Default", idcflt,      "dig",     0,      16,     2,      67  ) \
     PARAM_ENTRY("Default", idcramp,     "A/s",     0,      50,     1,      69  ) \
     PARAM_ENTRY("Default", idclim,      "A",       0,      50,     25,     70   ) \
     PARAM_ENTRY("Default", idcspnt,     "A",       0,      50,     0,      0   ) \
@@ -72,6 +73,7 @@
     VALUE_ENTRY(amp,         "dig",   1004 ) \
     VALUE_ENTRY(tmphs,       "°C",    1005 ) \
     VALUE_ENTRY(uaux,        "V",     1006 ) \
+    VALUE_ENTRY(soc,         "%",     1002 ) \
     VALUE_ENTRY(din_start,   ONOFF,   1008 ) \
     VALUE_ENTRY(din_emcystop,ONOFF,   1009 ) \
     VALUE_ENTRY(din_ocur,    ONOFF,   1010 ) \
