@@ -11,7 +11,7 @@ This project is not intended for newbies. You are working with grid voltages and
 - Control of an additional relay for precharging output caps
 
 # Pin map
-- Start input (PA2): start/stop charging
+- Start input (PB6): start/stop charging
 - Mprot input (PA3): tie to 12V, measure you logic supply voltage
 - Emcystop input (PC7): tie to 12V optionally via an emergeny stop switch
 - BMS input (PC8): currently unused, might be used to stop charging via ChaDeMo signal in future
