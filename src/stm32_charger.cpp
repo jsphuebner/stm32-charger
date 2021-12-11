@@ -134,10 +134,10 @@ extern "C" void pwm_timer_isr(void)
 
       Param::SetInt(Param::amp, pwm);
       Param::SetInt(Param::uout, uout);
-      Param::SetFlt(Param::power, power);
+      Param::SetFixed(Param::power, power);
    }
 
-   Param::SetFlt(Param::idc, idc);
+   Param::SetFixed(Param::idc, idc);
    Param::SetInt(Param::tm_meas, (timer_get_counter(PWM_TIMER) - last)/72);
 }
 
@@ -157,19 +157,19 @@ static void CalcAndOutputTemp()
    int pwmofs = Param::GetInt(Param::pwmofs);
    int tmpout;
    TempMeas::Sensors snshs = (TempMeas::Sensors)Param::GetInt(Param::snshs);
-   s32fp tmphsf;
+   float tmphsf;
    temphs = IIRFILTER(AnaIn::tmphs.Get(), temphs, 8);
 
    if (snshs == TempMeas::TEMP_PRIUS)
    {
-      tmphsf = FP_FROMFLT(166.66) - FP_DIV(FP_FROMINT(temphs), FP_FROMFLT(18.62));
+      tmphsf = 166.66f - temphs / 18.62f;
    }
    else
    {
       tmphsf = TempMeas::Lookup(temphs, snshs);
    }
 
-   tmpout = FP_TOINT(tmphsf) * pwmgain + pwmofs;
+   tmpout = tmphsf * pwmgain + pwmofs;
    tmpout = MIN(0xFFFF, MAX(0, tmpout));
 
    if (tmpout < 100)
@@ -182,7 +182,7 @@ static void CalcAndOutputTemp()
 
    timer_set_oc_value(OVER_CUR_TIMER, TIM_OC4, tmpout);
 
-   Param::SetFlt(Param::tmphs, tmphsf);
+   Param::SetFloat(Param::tmphs, tmphsf);
 }
 
 static void UpdateDisplay()
@@ -271,16 +271,16 @@ static void Ms100Task(void)
    Can::GetInterface(0)->SendAll();
 }
 
-static s32fp ProcessUdc()
+static float ProcessUdc()
 {
    static int32_t udc = 0;
-   s32fp udcfp;
-   s32fp udclim = Param::Get(Param::udclim);
-   s32fp udcgain = Param::Get(Param::udcgain);
+   float udcfp;
+   float udclim = Param::GetFloat(Param::udclim);
+   float udcgain = Param::GetFloat(Param::udcgain);
 
-   Param::SetFlt(Param::uaux, FP_DIV(AnaIn::uaux.Get(), 250));
+   Param::SetFloat(Param::uaux, AnaIn::uaux.Get() / 250.0f);
    udc = IIRFILTER(udc, AnaIn::udc.Get(), 4);
-   udcfp = FP_DIV(FP_FROMINT(udc - Param::GetInt(Param::udcofs)), udcgain);
+   udcfp = (udc - Param::GetInt(Param::udcofs)) / udcgain;
 
    if (udcfp > udclim)
    {
@@ -288,14 +288,14 @@ static s32fp ProcessUdc()
       ErrorMessage::Post(ERR_OVERVOLTAGE);
    }
 
-   Param::SetFlt(Param::udc, udcfp);
+   Param::SetFloat(Param::udc, udcfp);
 
    return udcfp;
 }
 
 static void Ms10Task(void)
 {
-   s32fp udc = ProcessUdc();
+   float udc = ProcessUdc();
    int opmode = Param::GetInt(Param::opmode);
    static int initWait = 0;
 
@@ -303,7 +303,7 @@ static void Ms10Task(void)
 
    /* switch on DC switch above threshold */
    if (opmode == MOD_OFF &&
-      (udc >= Param::Get(Param::udcsw) || Param::GetBool(Param::precfrombat)) &&
+      (udc >= Param::GetFloat(Param::udcsw) || Param::GetBool(Param::precfrombat)) &&
       !DigIo::bms_in.Get() && (DigIo::start_in.Get() || run))
    {
       if (Param::GetBool(Param::precfrombat))
@@ -396,11 +396,11 @@ static void SetCurrentLimitThreshold()
 }
 
 /** This function is called when the user changes a parameter */
-extern void parm_Change(Param::PARAM_NUM ParamNum)
+void Param::Change(Param::PARAM_NUM ParamNum)
 {
    if (ParamNum == Param::idcspnt)
    {
-      Param::SetFlt(Param::idcspnt, MIN(Param::Get(Param::idcspnt), Param::Get(Param::idclim)));
+      Param::SetFixed(Param::idcspnt, MIN(Param::Get(Param::idcspnt), Param::Get(Param::idclim)));
    }
 }
 
@@ -411,27 +411,30 @@ extern "C" void tim2_isr(void)
 
 extern "C" int main(void)
 {
+   extern const TERM_CMD TermCmds[];
+
    clock_setup();
 
    ANA_IN_CONFIGURE(ANA_IN_LIST);
    DIG_IO_CONFIGURE(DIG_IO_LIST);
 
-   usart_setup();
    nvic_setup();
    rtc_setup();
    AnaIn::Start();
    parm_load();
-   parm_Change(Param::PARAM_LAST);
+   Param::Change(Param::PARAM_LAST);
    PwmInit();
 
    Stm32Scheduler s(TIM2); //We never exit main so it's ok to put it on stack
    scheduler = &s;
    Can c(CAN1, Can::Baud500);
+   Terminal t(USART3, TermCmds);
 
    s.AddTask(Ms100Task, 100);
    s.AddTask(Ms10Task, 10);
 
-   term_Run();
+   while(1)
+      t.Run();
 
    return 0;
 }

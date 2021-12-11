@@ -29,7 +29,6 @@ extern "C"
 #endif
 
 void clock_setup(void);
-void usart_setup(void);
 void nvic_setup(void);
 void rtc_setup(void);
 uint16_t tim_setup(uint16_t pwmdigits, int pwmpol);
