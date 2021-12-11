@@ -17,17 +17,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <libopencm3/cm3/scb.h>
-#include <libopencm3/stm32/usart.h>
-#include "hwdefs.h"
 #include "terminal.h"
 #include "params.h"
-#include "my_string.h"
-#include "my_fp.h"
 #include "printf.h"
-#include "param_save.h"
 #include "errormessage.h"
-#include "stm32_can.h"
 #include "terminalcommands.h"
 
 static void LoadDefaults(Terminal* term, char *arg);
@@ -48,7 +41,7 @@ extern "C" const TERM_CMD TermCmds[] =
   { "defaults", LoadDefaults },
   { "stop", StopInverter },
   { "errors", PrintErrors },
-  { NULL, NULL }
+  { 0, 0 }
 };
 
 static void LoadDefaults(Terminal* term, char *arg)
@@ -62,9 +55,9 @@ static void LoadDefaults(Terminal* term, char *arg)
 static void StopInverter(Terminal* term, char *arg)
 {
    term = term;
-    arg = arg;
-    Param::SetInt(Param::opmode, 0);
-    printf("Inverter halted.\r\n");
+   arg = arg;
+   Param::SetInt(Param::opmode, 0);
+   printf("Inverter halted.\r\n");
 }
 
 static void PrintErrors(Terminal* term, char *arg)
