@@ -48,7 +48,7 @@ The only external depedencies are libopencm3 and libopeninv. You can download an
 
 `make get-deps`
 
-Now you can compile stm32-sine by typing
+Now you can compile stm32-charger by typing
 
 `make`
 

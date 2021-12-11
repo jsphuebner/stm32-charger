@@ -6,7 +6,9 @@
 
 #define DIG_IO_LIST \
     DIG_IO_ENTRY(dcsw_out,    GPIOC, GPIO13, PinMode::OUTPUT)      \
+    DIG_IO_ENTRY(acsw_out,    GPIOC, GPIO5,  PinMode::OUTPUT)      \
     DIG_IO_ENTRY(outc_out,    GPIOB, GPIO1,  PinMode::OUTPUT)      \
+    DIG_IO_ENTRY(pwmdis_out,  GPIOC, GPIO11, PinMode::OUTPUT)      \
     DIG_IO_ENTRY(led_out,     GPIOC, GPIO12, PinMode::OUTPUT)      \
     DIG_IO_ENTRY(start_in,    GPIOB, GPIO6,  PinMode::INPUT_PD)    \
     DIG_IO_ENTRY(emcystop_in, GPIOC, GPIO7,  PinMode::INPUT_PU)    \

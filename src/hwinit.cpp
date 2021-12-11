@@ -158,7 +158,7 @@ uint16_t tim_setup(uint16_t pwmdigits, int pwmpol)
    timer_disable_break_automatic_output(PWM_TIMER);
    timer_enable_break_main_output(PWM_TIMER);
    timer_set_break_polarity_high(PWM_TIMER);
-   timer_enable_break(PWM_TIMER);
+   //timer_enable_break(PWM_TIMER);
    timer_set_enabled_off_state_in_run_mode(PWM_TIMER);
    timer_set_enabled_off_state_in_idle_mode(PWM_TIMER);
 
@@ -182,11 +182,11 @@ uint16_t tim_setup(uint16_t pwmdigits, int pwmpol)
    timer_set_period(PWM_TIMER, pwmmax);
    timer_set_repetition_counter(PWM_TIMER, 1);
 
-   timer_set_oc_value(PWM_TIMER, TIM_OC1, 0);
-   timer_set_oc_value(PWM_TIMER, TIM_OC2, 0);
-   timer_set_oc_value(PWM_TIMER, TIM_OC3, 0);
+   //timer_set_oc_value(PWM_TIMER, TIM_OC1, 0);
+   //timer_set_oc_value(PWM_TIMER, TIM_OC2, 0);
+   //timer_set_oc_value(PWM_TIMER, TIM_OC3, 0);
 
-   timer_enable_counter(PWM_TIMER);
+   //timer_enable_counter(PWM_TIMER);
 
    /*** Setup over/undercurrent and PWM output timer */
    timer_disable_counter(OVER_CUR_TIMER);
@@ -227,10 +227,7 @@ void tim_output_enable()
 {
    timer_enable_oc_output(PWM_TIMER, TIM_OC1);
    timer_enable_oc_output(PWM_TIMER, TIM_OC2);
-   //timer_enable_oc_output(PWM_TIMER, TIM_OC3);
-   //timer_enable_oc_output(PWM_TIMER, TIM_OC1N);
-   //timer_enable_oc_output(PWM_TIMER, TIM_OC2N);
-   //timer_enable_oc_output(PWM_TIMER, TIM_OC3N);
+   timer_enable_counter(PWM_TIMER);
 }
 
 /**
@@ -244,4 +241,5 @@ void tim_output_disable()
    timer_disable_oc_output(PWM_TIMER, TIM_OC1N);
    timer_disable_oc_output(PWM_TIMER, TIM_OC2N);
    timer_disable_oc_output(PWM_TIMER, TIM_OC3N);
+   timer_disable_counter(PWM_TIMER);
 }

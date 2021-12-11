@@ -41,6 +41,7 @@
 #include "temp_meas.h"
 #include "param_save.h"
 #include "my_math.h"
+#include "errormessage.h"
 
 #define CAN_TIMEOUT       50  //500ms
 
@@ -48,6 +49,7 @@ static uint8_t  pwmdigits;
 static uint16_t pwmfrq;
 static uint16_t pwmmax;
 static s32fp idcspnt = 0;
+static s32fp esum = 0;
 //Current sensor offsets are determined at runtime
 static int idcofs;
 static Stm32Scheduler* scheduler;
@@ -58,38 +60,51 @@ extern "C" void tim1_brk_isr(void)
 {
    timer_disable_irq(PWM_TIMER, TIM_DIER_BIE);
    Param::SetInt(Param::opmode, MOD_OFF);
-   Param::SetInt(Param::idc, 0);
+   //Param::SetInt(Param::idc, 0);
+   Param::SetInt(Param::run, false);
+   DigIo::pwmdis_out.Set();
+
+   ErrorMessage::Post(ERR_OVERCURRENT);
 }
 
 extern "C" void pwm_timer_isr(void)
 {
-   static s32fp esum = 0;
    static int idcflt = 0;
    uint16_t last = timer_get_counter(PWM_TIMER);
+   int opmode = Param::GetInt(Param::opmode);
+   int idcAdc = AnaIn::idc.Get();
    /* Clear interrupt pending flag */
    TIM_SR(PWM_TIMER) &= ~TIM_SR_UIF;
 
-   idcflt = IIRFILTER(idcflt, AnaIn::idc.Get(), Param::GetInt(Param::idcflt));
-   if (MOD_RUN != Param::GetInt(Param::opmode))
+   idcflt = IIRFILTER(idcflt, idcAdc, Param::GetInt(Param::idcflt));
+   s32fp idc = FP_DIV(FP_FROMINT(idcflt - idcofs), Param::Get(Param::idcgain));
+
+   if (MOD_PRECHARGE == opmode)
    {
-      idcofs = idcflt;
-      esum = 0;
-      SetCurrentLimitThreshold();
-      timer_set_oc_value(PWM_TIMER, TIM_OC1, 0);
-      timer_set_oc_value(PWM_TIMER, TIM_OC2, 0);
+      s32fp udcerr = Param::GetInt(Param::udcsw) - Param::GetInt(Param::udc);
+      int out = pwmmax - ((Param::GetInt(Param::udcki) * esum) / pwmfrq);
+
+      if (out > pwmmax / 3)
+         esum += udcerr;
+
+      out = MAX(pwmmax / 3, out);
+      out = MIN(pwmmax, out);
+      uint16_t disp = MAX(0, FP_TOINT(FP_MUL(Param::Get(Param::dispgain), Param::Get(Param::udc) / 10)));
+
+      timer_set_oc_value(PWM_TIMER, TIM_OC1, out);
+      timer_set_oc_value(PWM_TIMER, TIM_OC2, disp);
+      DigIo::pwmdis_out.Clear();
+      Param::SetInt(Param::amp, out);
    }
-   else
+   else if (MOD_RUN == opmode)
    {
       s32fp kp = Param::Get(Param::idckp);
       s32fp ki = Param::Get(Param::idcki);
-      s32fp idc = FP_DIV(FP_FROMINT(idcflt - idcofs), Param::Get(Param::idcgain));
       s32fp idcerr = idcspnt - idc;
       s32fp out = FP_MUL(idcerr, kp) + (esum * ki / pwmfrq);
       uint16_t pwm = MAX(0, MIN(pwmmax, FP_TOINT(out)));
-      uint16_t disp = MAX(0, FP_TOINT(FP_MUL(Param::Get(Param::dispgain), idc)));
 
-      if (idcspnt == 0)
-         esum = 0;
+      pwm = MAX(Param::GetInt(Param::pwmmin), pwm);
 
       if ((pwm > 0 && pwm < pwmmax && esum < 5000000) || idcerr < 0)
          esum += idcerr;
@@ -100,12 +115,29 @@ extern "C" void pwm_timer_isr(void)
       if (pwm > (pwmmax - Param::GetInt(Param::minpulse)))
          pwm = pwmmax - Param::GetInt(Param::minpulse);
 
+      if (idcspnt == 0)
+      {
+         esum = 0;
+         pwm = Param::GetInt(Param::pwmmin);
+         DigIo::pwmdis_out.Set();
+      }
+
+      int uout = (Param::GetInt(Param::udc) * pwm) / pwmmax;
+      s32fp power = uout * idc;
+
       timer_set_oc_value(PWM_TIMER, TIM_OC1, pwm);
-      timer_set_oc_value(PWM_TIMER, TIM_OC2, disp);
-      Param::SetFlt(Param::idc, idc);
+
+      if (idcspnt > 0)
+      {
+         DigIo::pwmdis_out.Clear();
+      }
+
       Param::SetInt(Param::amp, pwm);
+      Param::SetInt(Param::uout, uout);
+      Param::SetFlt(Param::power, power);
    }
 
+   Param::SetFlt(Param::idc, idc);
    Param::SetInt(Param::tm_meas, (timer_get_counter(PWM_TIMER) - last)/72);
 }
 
@@ -115,8 +147,75 @@ static void PwmInit(void)
    pwmfrq = tim_setup(pwmdigits, Param::GetInt(Param::pwmpol));
    pwmmax = (1 << pwmdigits) - 1;
    pwmmax = MIN(pwmmax, Param::GetInt(Param::pwmmax));
+   esum = 0;
 }
 
+static void CalcAndOutputTemp()
+{
+   static int temphs = 0;
+   int pwmgain = Param::GetInt(Param::pwmgain);
+   int pwmofs = Param::GetInt(Param::pwmofs);
+   int tmpout;
+   TempMeas::Sensors snshs = (TempMeas::Sensors)Param::GetInt(Param::snshs);
+   s32fp tmphsf;
+   temphs = IIRFILTER(AnaIn::tmphs.Get(), temphs, 8);
+
+   if (snshs == TempMeas::TEMP_PRIUS)
+   {
+      tmphsf = FP_FROMFLT(166.66) - FP_DIV(FP_FROMINT(temphs), FP_FROMFLT(18.62));
+   }
+   else
+   {
+      tmphsf = TempMeas::Lookup(temphs, snshs);
+   }
+
+   tmpout = FP_TOINT(tmphsf) * pwmgain + pwmofs;
+   tmpout = MIN(0xFFFF, MAX(0, tmpout));
+
+   if (tmpout < 100)
+   {
+      if (tmpout > 50)
+         tmpout = 100;
+      else
+         tmpout = 0;
+   }
+
+   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC4, tmpout);
+
+   Param::SetFlt(Param::tmphs, tmphsf);
+}
+
+static void UpdateDisplay()
+{
+   int opmode = Param::GetInt(Param::opmode);
+   int dispfunc = Param::GetInt(Param::dispfunc);
+   s32fp value = Param::Get(Param::soc);
+
+   if (MOD_PRECHARGE == opmode)
+   {
+      value = Param::Get(Param::udc);
+   }
+   else if (MOD_RUN == opmode)
+   {
+      switch (dispfunc)
+      {
+      case DISP_CURRENT:
+         value = Param::Get(Param::idc);
+         break;
+      case DISP_POWER:
+         value = Param::Get(Param::power) / 1000;
+         break;
+      case DISP_SOC:
+         value = Param::Get(Param::soc) / 10;
+         break;
+      case DISP_TMPHS:
+         value = Param::Get(Param::tmphs);
+      }
+   }
+
+   uint16_t disp = MAX(0, FP_TOINT(FP_MUL(Param::Get(Param::dispgain), value)));
+   timer_set_oc_value(PWM_TIMER, TIM_OC2, disp);
+}
 
 static void Ms100Task(void)
 {
@@ -125,10 +224,16 @@ static void Ms100Task(void)
    s32fp idcIncr = Param::Get(Param::idcramp) / 10;
    s32fp tmphs = Param::Get(Param::tmphs);
    s32fp tmphsmax = Param::Get(Param::tmphsmax);
+
    uint32_t lastCanReceptionTime = Can::GetInterface(0)->GetLastRxTimestamp();
 
    /* If we ever received something via CAN, assume CAN controlled mode */
-   if (lastCanReceptionTime > 0 && (rtc_get_counter_val() - lastCanReceptionTime) >= CAN_TIMEOUT)
+   if ((lastCanReceptionTime > 0 && (rtc_get_counter_val() - lastCanReceptionTime) >= CAN_TIMEOUT))
+   {
+      _idcspnt = 0;
+      ErrorMessage::Post(ERR_CANTIMEOUT);
+   }
+   else if (Param::GetInt(Param::opmode) != MOD_RUN)
    {
       _idcspnt = 0;
    }
@@ -150,41 +255,20 @@ static void Ms100Task(void)
    else
       idcspnt = _idcspnt;
 
+   CalcAndOutputTemp();
+   UpdateDisplay();
 
    DigIo::led_out.Toggle();
    iwdg_reset();
 
+   ErrorMessage::SetTime(rtc_get_counter_val());
+
    Param::SetInt(Param::din_start, DigIo::start_in.Get());
    Param::SetInt(Param::din_emcystop, DigIo::emcystop_in.Get());
    Param::SetInt(Param::din_bms, DigIo::bms_in.Get());
+   Param::SetInt(Param::lasterr, ErrorMessage::GetLastError());
 
    Can::GetInterface(0)->SendAll();
-}
-
-
-static void CalcAndOutputTemp()
-{
-   static int temphs = 0;
-   int pwmgain = Param::GetInt(Param::pwmgain);
-   int pwmofs = Param::GetInt(Param::pwmofs);
-   int tmpout;
-   TempMeas::Sensors snshs = (TempMeas::Sensors)Param::GetInt(Param::snshs);
-   temphs = IIRFILTER(AnaIn::tmphs.Get(), temphs, 15);
-   s32fp tmphsf = TempMeas::Lookup(temphs, snshs);
-   tmpout = FP_TOINT(tmphsf) * pwmgain + pwmofs;
-   tmpout = MIN(0xFFFF, MAX(0, tmpout));
-
-   if (tmpout < 100)
-   {
-      if (tmpout > 50)
-         tmpout = 100;
-      else
-         tmpout = 0;
-   }
-
-   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC4, tmpout);
-
-   Param::SetFlt(Param::tmphs, tmphsf);
 }
 
 static s32fp ProcessUdc()
@@ -195,12 +279,13 @@ static s32fp ProcessUdc()
    s32fp udcgain = Param::Get(Param::udcgain);
 
    Param::SetFlt(Param::uaux, FP_DIV(AnaIn::uaux.Get(), 250));
-   udc = IIRFILTER(udc, AnaIn::udc.Get(), 5);
-   udcfp = FP_DIV(FP_FROMINT(udc), udcgain);
+   udc = IIRFILTER(udc, AnaIn::udc.Get(), 4);
+   udcfp = FP_DIV(FP_FROMINT(udc - Param::GetInt(Param::udcofs)), udcgain);
 
    if (udcfp > udclim)
    {
       Param::SetInt(Param::opmode, MOD_OFF);
+      ErrorMessage::Post(ERR_OVERVOLTAGE);
    }
 
    Param::SetFlt(Param::udc, udcfp);
@@ -214,18 +299,31 @@ static void Ms10Task(void)
    int opmode = Param::GetInt(Param::opmode);
    static int initWait = 0;
 
-   CalcAndOutputTemp();
+   bool run = Param::GetBool(Param::run);
 
    /* switch on DC switch above threshold */
-   if (opmode == MOD_OFF && udc >= Param::Get(Param::udcsw) && (DigIo::start_in.Get() || Param::GetInt(Param::run) == 1))
+   if (opmode == MOD_OFF &&
+      (udc >= Param::Get(Param::udcsw) || Param::GetBool(Param::precfrombat)) &&
+      !DigIo::bms_in.Get() && (DigIo::start_in.Get() || run))
    {
-      opmode = MOD_WAIT;
+      if (Param::GetBool(Param::precfrombat))
+      {
+         PwmInit();
+         timer_set_oc_value(PWM_TIMER, TIM_OC1, pwmmax);
+         tim_output_enable();
+         DigIo::pwmdis_out.Clear();
+      }
+
+      run = true;
+      opmode = MOD_PRECHARGE;
       DigIo::dcsw_out.Set();
-      Param::SetInt(Param::run, 0); //reset so it doesn't restart on error
-      Param::SetInt(Param::opmode, MOD_WAIT);
+      Param::SetInt(Param::opmode, MOD_PRECHARGE);
+      Param::SetInt(Param::run, true);
+
+      ErrorMessage::UnpostAll();
    }
 
-   if (initWait < 0 && DigIo::start_in.Get())
+   if (initWait < 0 && (DigIo::start_in.Get() || DigIo::bms_in.Get() || !run))
    {
       opmode = MOD_EXIT;
       Param::SetInt(Param::opmode, MOD_EXIT);
@@ -235,11 +333,16 @@ static void Ms10Task(void)
 
    if (MOD_OFF == opmode)
    {
-      initWait = 500;
+      initWait = 50;
       idcspnt = 0;
       tim_output_disable();
+      DigIo::pwmdis_out.Set();
       DigIo::dcsw_out.Clear();
       DigIo::outc_out.Clear();
+      DigIo::acsw_out.Clear();
+
+      idcofs = AnaIn::idc.Get();
+      SetCurrentLimitThreshold();
    }
    else if (MOD_EXIT == opmode)
    {
@@ -252,17 +355,24 @@ static void Ms10Task(void)
          Param::SetInt(Param::opmode, MOD_OFF);
       }
    }
-   else if (100 == initWait)
+   else if (opmode == MOD_PRECHARGE)
    {
-      DigIo::outc_out.Set();
-      initWait--;
+      if (udc >= Param::Get(Param::udcbatmin))
+      {
+         Param::SetInt(Param::pwmmin, Param::GetInt(Param::amp));
+         //DigIo::pwmdis_out.Set();
+         //tim_output_disable();
+         DigIo::outc_out.Set();
+         DigIo::acsw_out.Set();
+         initWait = 100;
+         Param::SetInt(Param::opmode, MOD_RUN);
+      }
    }
    else if (0 == initWait)
    {
       PwmInit();
       tim_output_enable();
       initWait = -1;
-      Param::SetInt(Param::opmode, MOD_RUN);
    }
    else if (initWait > 0)
    {
@@ -273,9 +383,7 @@ static void Ms10Task(void)
 static void SetCurrentLimitThreshold()
 {
    s32fp ocurlim = Param::Get(Param::ocurlim);
-   s32fp igain = Param::Get(Param::idcgain);
-
-   if (igain < 0) igain = -igain;
+   s32fp igain = ABS(Param::Get(Param::idcgain));
 
    ocurlim = FP_MUL(igain, ocurlim);
    int limNeg = idcofs - FP_TOINT(ocurlim);
@@ -283,8 +391,8 @@ static void SetCurrentLimitThreshold()
    limNeg = MAX(0, limNeg);
    limPos = MIN(OCURMAX, limPos);
 
-   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC3, limNeg);
-   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC2, limPos);
+   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC2, limNeg);
+   timer_set_oc_value(OVER_CUR_TIMER, TIM_OC3, limPos);
 }
 
 /** This function is called when the user changes a parameter */
@@ -294,7 +402,6 @@ extern void parm_Change(Param::PARAM_NUM ParamNum)
    {
       Param::SetFlt(Param::idcspnt, MIN(Param::Get(Param::idcspnt), Param::Get(Param::idclim)));
    }
-   SetCurrentLimitThreshold();
 }
 
 extern "C" void tim2_isr(void)

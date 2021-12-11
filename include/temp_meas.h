@@ -28,7 +28,7 @@ public:
    {
       TEMP_JCURVE = 0,
       TEMP_SEMIKRON = 1,
-      TEMP_MBB600 = 2,
+      TEMP_PRIUS = 2,
       TEMP_KTY81HS = 3,
       TEMP_PT1000 = 4,
       TEMP_NTCK45 = 5, /*hier muss ein NTC K45 2k2 verwendet werden, der mit einem Parallelwiderstand mit 2k verschaltet wird. Achtung: Der Parallelwiderstand ist im Schaltplan und Layout nicht vorhanden! */
