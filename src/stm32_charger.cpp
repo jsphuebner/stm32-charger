@@ -357,7 +357,7 @@ static void Ms10Task(void)
    }
    else if (opmode == MOD_PRECHARGE)
    {
-      if (udc >= Param::Get(Param::udcbatmin))
+      if (udc >= Param::GetFloat(Param::udcbatmin))
       {
          Param::SetInt(Param::pwmmin, Param::GetInt(Param::amp));
          //DigIo::pwmdis_out.Set();
