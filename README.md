@@ -14,12 +14,12 @@ This project is not intended for newbies. You are working with grid voltages and
 - Start input (PB6): start/stop charging
 - Mprot input (PA3): tie to 12V, measure you logic supply voltage
 - Emcystop input (PC7): tie to 12V optionally via an emergeny stop switch
-- BMS input (PC8): currently unused, might be used to stop charging via ChaDeMo signal in future
+- BMS input (PC8): Allows charging when low. Pull-up to 12V and connect to CHAdeMO allow signal
 - il1, il2 (PB0, PA5): output current sensor, connect them together on your board to keep the current limiter happy
 - udc (PC3): input or output voltage. Used for precharge in the former case
 - tmphs (PC4): heat sink temperature, used for fan control and over temperature shutdown
 - dcsw (PC13): closes when you hit start and udc >= udcsw
-- outc (formerly precharge) output (PB1): closes 4s after dcsw after precharging output caps to battery voltage
+- outc (formerly precharge) output (PB1): closes after dcsw after precharging output caps to battery voltage
 - temp output (PB9): outputs PWM proportional to heatsink temperature
 - PWM1 positive (PA8): IGBT gate drive signal
 - PWM2 positive (PA9): PWM proportional to output current, I use it with a cheap modified voltmeter that displays current now
