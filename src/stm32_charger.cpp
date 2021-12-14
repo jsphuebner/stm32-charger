@@ -96,7 +96,7 @@ extern "C" void pwm_timer_isr(void)
       DigIo::pwmdis_out.Clear();
       Param::SetInt(Param::amp, out);
    }
-   else if (MOD_RUN == opmode)
+   else if (MOD_RUN == opmode || MOD_EXIT == opmode)
    {
       s32fp kp = Param::Get(Param::idckp);
       s32fp ki = Param::Get(Param::idcki);
@@ -323,7 +323,8 @@ static void Ms10Task(void)
       ErrorMessage::UnpostAll();
    }
 
-   if (initWait < 0 && (DigIo::start_in.Get() || DigIo::bms_in.Get() || !run))
+   if ((initWait < 0 && DigIo::start_in.Get()) ||
+       (opmode != MOD_OFF && opmode != MOD_EXIT && (DigIo::bms_in.Get() || !run)))
    {
       opmode = MOD_EXIT;
       Param::SetInt(Param::opmode, MOD_EXIT);
