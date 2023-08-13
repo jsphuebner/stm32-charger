@@ -17,18 +17,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define CDMSTAT  "0=Off, 1=Charging, 4=ConnLock"
 #define OPMODES  "0=Off, 1=Precharge, 2=Run, 3=Exit"
 #define PWMFRQS  "0=17.6kHz, 1=8.8kHz, 2=4.4KHz, 3=2.2kHz, 4=1.1kHz"
 #define PWMPOLS  "0=ActHigh, 1=ActLow"
 #define ONOFF    "0=Off, 1=On"
 #define SNS_HS   "0=JCurve, 1=Semikron, 2=Prius"
 #define DISPFUNCS "0=Current, 1=Power, 2=SoC, 3=TmpHs"
-#define VER 4.20
+#define VER 4.23
 
 #define MOD_OFF         0
 #define MOD_PRECHARGE   1
 #define MOD_RUN         2
 #define MOD_EXIT        3
+
+#define CDM_OFF         0
+#define CDM_CHARGING    1
+#define CDM_LOCK        4
 
 #define DISP_CURRENT    0
 #define DISP_POWER      1
@@ -79,6 +84,7 @@
     PARAM_ENTRY(CAT_RELAYS,      precfrombat, ONOFF,     0,      1,      0,      74  ) \
     PARAM_ENTRY("Default",       version,     "4=1.11.R",4,      4,      4,      0   ) \
     VALUE_ENTRY(opmode,      OPMODES, 1000 ) \
+    VALUE_ENTRY(cdmstat,     OPMODES, 1014 ) \
     VALUE_ENTRY(lasterr,     errorListString,  1013 ) \
     VALUE_ENTRY(udc,         "V",     1001 ) \
     VALUE_ENTRY(uout,        "V",     1014 ) \

@@ -322,6 +322,7 @@ static void Ms10Task(void)
       DigIo::dcsw_out.Set();
       Param::SetInt(Param::opmode, MOD_PRECHARGE);
       Param::SetInt(Param::run, true);
+      Param::SetInt(Param::cdmstat, CDM_LOCK);
 
       ErrorMessage::UnpostAll();
    }
@@ -344,6 +345,7 @@ static void Ms10Task(void)
       DigIo::dcsw_out.Clear();
       DigIo::outc_out.Clear();
       DigIo::acsw_out.Clear();
+      Param::SetInt(Param::cdmstat, CDM_OFF);
    }
    else if (MOD_EXIT == opmode)
    {
@@ -367,6 +369,7 @@ static void Ms10Task(void)
          DigIo::acsw_out.Set();
          initWait = 100;
          Param::SetInt(Param::opmode, MOD_RUN);
+         Param::SetInt(Param::cdmstat, CDM_LOCK | CDM_CHARGING);
       }
    }
    else if (0 == initWait)
