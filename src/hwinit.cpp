@@ -119,12 +119,9 @@ uint16_t tim_setup(uint16_t pwmdigits, int pwmpol)
       timer_set_oc_polarity_high(PWM_TIMER, TIM_OC3);
    }
 
-   //tim_output_enable();
-
    timer_disable_break_automatic_output(PWM_TIMER);
    timer_enable_break_main_output(PWM_TIMER);
    timer_set_break_polarity_high(PWM_TIMER);
-   //timer_enable_break(PWM_TIMER);
    timer_set_enabled_off_state_in_run_mode(PWM_TIMER);
    timer_set_enabled_off_state_in_idle_mode(PWM_TIMER);
 

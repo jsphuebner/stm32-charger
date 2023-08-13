@@ -143,6 +143,9 @@ extern "C" void pwm_timer_isr(void)
 
 static void PwmInit(void)
 {
+   idcofs = AnaIn::idc.Get();
+   SetCurrentLimitThreshold();
+
    pwmdigits = MIN_PWM_DIGITS + Param::GetInt(Param::pwmfrq);
    pwmfrq = tim_setup(pwmdigits, Param::GetInt(Param::pwmpol));
    pwmmax = (1 << pwmdigits) - 1;
@@ -341,9 +344,6 @@ static void Ms10Task(void)
       DigIo::dcsw_out.Clear();
       DigIo::outc_out.Clear();
       DigIo::acsw_out.Clear();
-
-      idcofs = AnaIn::idc.Get();
-      SetCurrentLimitThreshold();
    }
    else if (MOD_EXIT == opmode)
    {
@@ -391,6 +391,11 @@ static void SetCurrentLimitThreshold()
    int limPos = idcofs + FP_TOINT(ocurlim);
    limNeg = MAX(0, limNeg);
    limPos = MIN(OCURMAX, limPos);
+
+   if (ocurlim != 0)
+   {
+      timer_enable_break(PWM_TIMER);
+   }
 
    timer_set_oc_value(OVER_CUR_TIMER, TIM_OC2, limNeg);
    timer_set_oc_value(OVER_CUR_TIMER, TIM_OC3, limPos);
